@@ -1,0 +1,729 @@
+---
+title: "DataUsage_Survey_2024_090224"
+author: "André Rodrigues Soares"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(ggsankey)
+library(kableExtra)
+library(patchwork)
+```
+
+```{r message=FALSE, warning=FALSE}
+survey = read_tsv("DRI_Survey_121223 (Responses) - Form responses 1.tsv") %>% 
+  filter(`To participate in this survey, please tick “I agree”.` == "I agree")
+```
+
+One participant disagreed. Total 306 responses taken forward in the analysis.
+
+### `Which region are you from?` + `What is your career stage?`
+
+```{r message=FALSE, warning=FALSE, fig.width = 10}
+survey_ml = survey %>%
+  make_long(`Which region are you from?`,
+         `What is your career stage?`)
+
+tol13rainbow=c("#882E72", "#D6C1DE","#4EB265", "#1965B0", "#F1932D", "#7BAFDE","#F7EE55", "#CAE0AB",  "#F6C141", "#90C987","#E8601C")
+
+ggplot(survey_ml, aes(x = x, 
+               next_x = next_x, 
+               node = node, 
+               next_node = next_node,
+               fill = factor(node),
+               label = node)) +
+  geom_sankey(flow.alpha = 0.75,
+              node.color = "black") +
+  geom_sankey_label(data = survey_ml %>% 
+                      filter(x == "Which region are you from?"),
+                    mapping = aes(x = x, 
+               fill = factor(node),
+               label = node),
+               fill = "white", 
+               alpha = 0.6,
+               hjust = 1) +
+    geom_sankey_label(data = survey_ml %>% 
+                      filter(x == "What is your career stage?"),
+                    mapping = aes(x = x, 
+               fill = factor(node),
+               label = node),
+               fill = "white", 
+               alpha = 0.6,
+               hjust = 0) +
+  scale_fill_manual(values = tol13rainbow) +
+  theme_sankey(base_size = 16) +
+  theme(axis.title = element_blank(),
+        axis.text.x = element_text(face = "bold"),
+        legend.position = "none")
+
+combined_tbl = survey %>%
+  select(`Which region are you from?`,
+         `What is your career stage?`) %>% 
+  group_by(`Which region are you from?`, `What is your career stage?`) %>% 
+  summarise(count = n(),
+            pc = round(count/306*100, 1),
+            count_pc = paste0(pc, "% (", count, ")")) %>% 
+  select(-pc, -count) %>% 
+  pivot_wider(names_from = `What is your career stage?`,
+              values_from = count_pc) %>% 
+  mutate(across(everything(), ~replace_na(.x, "No answers"))) %>% 
+  relocate(`Which region are you from?`, `Professor/Group Leader/PI`, `Post doc`, `Staff scientist`, `Ph.D. student`, Other)
+
+combined_tbl_kbl = combined_tbl %>% 
+  kbl() %>% 
+  kable_classic(full_width = F) %>% 
+  column_spec(1, bold = TRUE, 
+              border_right = T)
+
+region_totals = survey %>%
+  select(`Which region are you from?`,
+         `What is your career stage?`) %>% 
+  group_by(`Which region are you from?`) %>% 
+  summarise(count = n(),
+            pc = round(count/306*100, 1),
+            count_pc = paste0(pc, "% (", count, ")")) %>% 
+  select(`Which region are you from?`,
+         count_pc)
+
+career_totals = survey %>%
+  select(`Which region are you from?`,
+         `What is your career stage?`) %>% 
+  group_by(`What is your career stage?`) %>% 
+  summarise(count = n(),
+            pc = round(count/306*100, 1),
+            count_pc = paste0(pc, "% (", count, ")")) %>% 
+  select(`What is your career stage?`,
+         count_pc) %>% 
+  pivot_wider(names_from = `What is your career stage?`,
+              values_from = count_pc) %>% 
+  relocate(`Professor/Group Leader/PI`, `Post doc`, `Staff scientist`, `Ph.D. student`, Other)
+
+combined_tbl_region = combined_tbl %>% 
+  add_column(region_totals = region_totals$count_pc) %>% 
+  bind_rows(career_totals) %>% 
+  mutate(region_totals = replace(region_totals, is.na(region_totals), "100% (306)")) %>% 
+  rename(" " = region_totals) %>% 
+  mutate(`Which region are you from?` = replace_na(`Which region are you from?`, ""))
+
+combined_tbl_region %>% 
+  kbl() %>% 
+  kable_classic(full_width = F) %>% 
+  column_spec(1, bold = TRUE, 
+              border_right = T) %>% 
+  column_spec(6,
+              border_right = T) %>% 
+  row_spec(7, extra_css = "border-top: 1px solid;")
+```
+
+### `What is your career stage?` + `Do you have decision power regarding the release of sequence data to the public for any of the projects you are involved in?`
+
+```{r message=FALSE, warning=FALSE}
+survey_ml2 = survey %>% 
+  make_long(`What is your career stage?`, 
+            `Do you have decision power regarding the release of sequence data to the public for any of the projects you are involved in?`)
+
+tol13rainbow=c("#882E72", "#D6C1DE","#4EB265", "#1965B0", "#F1932D", "#7BAFDE","#F7EE55", "#CAE0AB",  "#F6C141", "#90C987","#E8601C")
+
+ggplot(survey_ml2, aes(x = x, 
+               next_x = next_x, 
+               node = node, 
+               next_node = next_node,
+               fill = factor(node),
+               label = node)) +
+  geom_sankey(flow.alpha = 0.75,
+              node.color = "black") +
+  geom_sankey_label(fill = "white", 
+               alpha = 0.6) +
+  scale_fill_manual(values = tol13rainbow) +
+  theme_sankey(base_size = 16) +
+  theme(axis.title = element_blank(),
+        axis.text.x = element_blank(),
+        legend.position = "none")
+
+survey %>%
+  select(`Do you have decision power regarding the release of sequence data to the public for any of the projects you are involved in?`,
+         `What is your career stage?`) %>% 
+  group_by(`What is your career stage?`,
+           `Do you have decision power regarding the release of sequence data to the public for any of the projects you are involved in?`) %>% 
+  summarise(count = n(),
+            pc = round(count/306*100, 1),
+            count_pc = paste0(pc, "% (", count, ")")) %>% 
+  select(-pc, -count) %>% 
+  pivot_wider(names_from = `Do you have decision power regarding the release of sequence data to the public for any of the projects you are involved in?`,
+              values_from = count_pc) %>% 
+  mutate(across(everything(), ~replace_na(.x, 0))) %>% 
+  relocate(`What is your career stage?`, Yes, No) %>% 
+  rename(`Career stage` = `What is your career stage?`) %>% 
+  kbl(caption = "Do you have decision power regarding the release of sequence data to the public for any of the projects you are involved in?") %>% 
+  kable_classic(full_width = F) %>% 
+  column_spec(1, bold = TRUE, 
+              border_right = T)
+```
+
+### `Most journals require sequence data associated with a published paper to be made publicly available, e.g., by deposition in public databases. Do you believe that all sequencing data that has been published in a journal (excluding preprint servers) should be publicly available?`
+
+```{r}
+survey %>%
+  select(`What is your career stage?`,
+         `Most journals require sequence data associated with a published paper to be made publicly available, e.g., by deposition in public databases. Do you believe that all sequencing data that has been published in a journal (excluding preprint servers) should be publicly available?`) %>% 
+  group_by(`What is your career stage?`,
+         `Most journals require sequence data associated with a published paper to be made publicly available, e.g., by deposition in public databases. Do you believe that all sequencing data that has been published in a journal (excluding preprint servers) should be publicly available?`) %>% 
+  summarise(count = n(),
+            pc = round(count/306*100, 1),
+            count_pc = paste0(pc, "% (", count, ")")) %>% 
+  select(-pc, -count) %>% 
+  pivot_wider(names_from = `Most journals require sequence data associated with a published paper to be made publicly available, e.g., by deposition in public databases. Do you believe that all sequencing data that has been published in a journal (excluding preprint servers) should be publicly available?`,
+              values_from = count_pc) %>% 
+  relocate(`What is your career stage?`, Yes, No) %>% 
+  rename(`Career stage` = `What is your career stage?`) %>% 
+  kbl(caption = "Do you believe that all sequencing data that has been published in a journal (excluding preprint servers) should be publicly available?") %>% 
+  kable_classic(full_width = F) %>% 
+  column_spec(1, bold = TRUE, 
+              border_right = T)
+```
+
+### `Are you aware of the “Bermuda Agreement/Fort Lauderdale Agreement” recommending  researchers to make sequence data publicly available within 24 hours after quality control?  References: https://web.ornl.gov/sci/techresources/Human_Genome/research/bermuda.shtml#2 https://www.sanger.ac.uk/wp-content/uploads/fortlauderdalereport.pdf` + `In your experience, is the Bermuda Agreement/Fort Lauderdale Agreement commonly adhered to in your country?`
+
+```{r fig.width = 14}
+survey_ml3 = survey %>% 
+  rename(`Are you aware of the “Bermuda Agreement/Fort Lauderdale Agreement” recommending  researchers to make sequence data publicly available within 24 hours after quality control?` = 
+         `Are you aware of the “Bermuda Agreement/Fort Lauderdale Agreement” recommending  researchers to make sequence data publicly available within 24 hours after quality control?  References: https://web.ornl.gov/sci/techresources/Human_Genome/research/bermuda.shtml#2 https://www.sanger.ac.uk/wp-content/uploads/fortlauderdalereport.pdf`) %>% 
+  make_long(`What is your career stage?`,
+         `Are you aware of the “Bermuda Agreement/Fort Lauderdale Agreement” recommending  researchers to make sequence data publicly available within 24 hours after quality control?`,
+         `In your experience, is the Bermuda Agreement/Fort Lauderdale Agreement commonly adhered to in your country?`)
+
+tol13rainbow=c("#882E72", "#D6C1DE","#4EB265", "#1965B0", "#F1932D", "#7BAFDE","#F7EE55", "#CAE0AB",  "#F6C141", "#90C987","#E8601C")
+
+ggplot(survey_ml3, aes(x = x, 
+               next_x = next_x, 
+               node = node, 
+               next_node = next_node,
+               fill = factor(node),
+               label = node)) +
+  geom_sankey(flow.alpha = 0.75,
+              node.color = "black") +
+  geom_sankey_label(fill = "white", 
+               alpha = 0.6) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 45)) +
+  scale_fill_manual(values = tol13rainbow) +
+  theme_sankey(base_size = 16) +
+  theme(axis.title = element_blank(),
+        axis.text.x = element_text(face = "bold"),
+        legend.position = "none")
+```
+
+```{r fig.width = 10, fig.height= 3}
+bermuda_df_q1 = survey %>%
+  select(`What is your career stage?`,
+         `Are you aware of the “Bermuda Agreement/Fort Lauderdale Agreement” recommending  researchers to make sequence data publicly available within 24 hours after quality control?  References: https://web.ornl.gov/sci/techresources/Human_Genome/research/bermuda.shtml#2 https://www.sanger.ac.uk/wp-content/uploads/fortlauderdalereport.pdf`) %>% 
+  group_by(`What is your career stage?`,
+         `Are you aware of the “Bermuda Agreement/Fort Lauderdale Agreement” recommending  researchers to make sequence data publicly available within 24 hours after quality control?  References: https://web.ornl.gov/sci/techresources/Human_Genome/research/bermuda.shtml#2 https://www.sanger.ac.uk/wp-content/uploads/fortlauderdalereport.pdf`) %>% 
+  summarise(count = n(),
+            pc = round(count/306*100, 1),
+            count_pc = paste0(pc, "% (", count, ")")) %>% 
+  select(-count) %>% 
+  rename(`Are you aware of the “Bermuda Agreement/Fort Lauderdale Agreement” recommending  researchers to make sequence data publicly available within 24 hours after quality control?` = 
+         `Are you aware of the “Bermuda Agreement/Fort Lauderdale Agreement” recommending  researchers to make sequence data publicly available within 24 hours after quality control?  References: https://web.ornl.gov/sci/techresources/Human_Genome/research/bermuda.shtml#2 https://www.sanger.ac.uk/wp-content/uploads/fortlauderdalereport.pdf`)
+
+bermuda_df_q2 = survey %>%
+  select(`What is your career stage?`,
+         `In your experience, is the Bermuda Agreement/Fort Lauderdale Agreement commonly adhered to in your country?`) %>% 
+  group_by(`What is your career stage?`,
+         `In your experience, is the Bermuda Agreement/Fort Lauderdale Agreement commonly adhered to in your country?`) %>% 
+  summarise(count = n(),
+            pc = round(count/306*100, 1),
+            count_pc = paste0(pc, "% (", count, ")")) %>% 
+  select(-count)
+
+ggplot(bermuda_df_q1,
+       aes(pc, `What is your career stage?`,
+           fill = `Are you aware of the “Bermuda Agreement/Fort Lauderdale Agreement” recommending  researchers to make sequence data publicly available within 24 hours after quality control?`)) +
+  geom_bar(stat = "identity", position="fill",
+           colour = "black") +
+  scale_fill_manual(values = c("#E69F00", "#56B4E9")) +
+  scale_x_continuous(expand = c(0,0),
+                     labels = scales::percent_format()) +
+  scale_y_discrete(expand = c(0,0)) +
+  ggtitle("Are you aware of the “Bermuda Agreement/Fort Lauderdale Agreement” recommending researchers\nto make sequence data publicly available within 24 hours after quality control?") +
+  theme_bw() +
+  theme(legend.title = element_blank(),
+        axis.title = element_blank())
+
+ggplot(bermuda_df_q2,
+       aes(pc, `What is your career stage?`,
+           fill = `In your experience, is the Bermuda Agreement/Fort Lauderdale Agreement commonly adhered to in your country?`)) +
+  geom_bar(stat = "identity", position="fill",
+           colour = "black") +
+  scale_fill_manual(values = c("#009E73", "#E69F00", "#56B4E9")) +
+  scale_x_continuous(expand = c(0,0),
+                     labels = scales::percent_format()) +
+  scale_y_discrete(expand = c(0,0)) +
+  ggtitle("In your experience, is the Bermuda Agreement/Fort Lauderdale Agreement\ncommonly adhered to in your country?") +
+  theme_bw() +
+  theme(legend.title = element_blank(),
+        axis.title = element_blank())
+```
+
+### `Years to release privately vs publicly funded data`
+
+```{r fig.width = 10, fig.height=4}
+years_rel = survey %>% 
+  select(`What is your career stage?`,
+         `In your opinion, DNA sequencing data funded by taxpayers' money should be made publicly available how many years after data generation, if not published on by that time (select “NO” for not having to be released at all, select “0” for immediate release after quality control of raw sequence data, write any number indicating the suggested embargo period in years):`,
+         `In your opinion, DNA sequencing data funded by private funding agencies should be made publicly available how many years after data generation, if not published on by that time (select “NO” for not being released at all, select “0” for immediate release after quality control of raw sequence data, write any number indicating the suggested embargo period in years)`) %>% 
+  rename(`Publicly funded data` =  `In your opinion, DNA sequencing data funded by taxpayers' money should be made publicly available how many years after data generation, if not published on by that time (select “NO” for not having to be released at all, select “0” for immediate release after quality control of raw sequence data, write any number indicating the suggested embargo period in years):`) %>% 
+  rename(`Privately funded data` = `In your opinion, DNA sequencing data funded by private funding agencies should be made publicly available how many years after data generation, if not published on by that time (select “NO” for not being released at all, select “0” for immediate release after quality control of raw sequence data, write any number indicating the suggested embargo period in years)`) %>% 
+  group_by(`What is your career stage?`,
+           `Publicly funded data`,
+           `Privately funded data`) %>% 
+  summarise(count = n(),
+            pc = round(count/306*100, 1),
+            count_pc = paste0(pc, "% (", count, ")")) %>% 
+  select(-count) %>% 
+  pivot_longer(names_to = "questions",
+               values_to = "responses",
+               -c(`What is your career stage?`, count_pc, pc)) %>% 
+  group_by(`What is your career stage?`, questions, responses) %>% 
+  summarise(pc_sum = sum(pc)) %>% 
+  mutate(responses = case_when(responses == "NO (no release of data)" ~ "NR",
+                               TRUE ~ responses))
+
+years_rel %>% 
+  ggplot(aes(fct_relevel(responses,
+                         c("0", "1", "2", "3", "4",
+                           "5", "6", "7", "8", "10", "10+", "NR")), 
+             pc_sum/100, 
+             group = `What is your career stage?`,
+             colour = `What is your career stage?`)) +
+    geom_point(alpha = 1, size = 4, shape = 1, colour = "black") +
+    geom_point(alpha = 0.5, size = 4) +
+    geom_line(size = 1) +
+    scale_color_manual(values = c("#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#999999" )) +
+    facet_grid(questions~.) +
+    guides(colour = guide_legend(title = "Career stage")) +
+    scale_y_continuous(labels = scales::percent_format()) +
+    labs(y = "Percent of participants") +
+    ggtitle("In your opinion, DNA sequencing data funded by private/public funding agencies\nshould be made publicly available how many years after data generation, if not published on by that time?") +
+    theme_bw() +
+    theme(axis.title.x = element_blank(),
+          strip.text.y = element_text(angle = 0, face = "bold"),
+          strip.background = element_rect(fill="white"))
+
+years_rel_all = survey %>% 
+  select(`In your opinion, DNA sequencing data funded by taxpayers' money should be made publicly available how many years after data generation, if not published on by that time (select “NO” for not having to be released at all, select “0” for immediate release after quality control of raw sequence data, write any number indicating the suggested embargo period in years):`,
+         `In your opinion, DNA sequencing data funded by private funding agencies should be made publicly available how many years after data generation, if not published on by that time (select “NO” for not being released at all, select “0” for immediate release after quality control of raw sequence data, write any number indicating the suggested embargo period in years)`) %>% 
+  rename(`Publicly funded data` =  `In your opinion, DNA sequencing data funded by taxpayers' money should be made publicly available how many years after data generation, if not published on by that time (select “NO” for not having to be released at all, select “0” for immediate release after quality control of raw sequence data, write any number indicating the suggested embargo period in years):`) %>% 
+  rename(`Privately funded data` = `In your opinion, DNA sequencing data funded by private funding agencies should be made publicly available how many years after data generation, if not published on by that time (select “NO” for not being released at all, select “0” for immediate release after quality control of raw sequence data, write any number indicating the suggested embargo period in years)`) %>% 
+  group_by(`Publicly funded data`,
+           `Privately funded data`) %>% 
+  summarise(count = n(),
+            pc = round(count/306*100, 1),
+            count_pc = paste0(pc, "% (", count, ")")) %>% 
+  select(-count) %>% 
+  pivot_longer(names_to = "questions",
+               values_to = "responses",
+               -c(count_pc, pc)) %>% 
+  group_by(questions, responses) %>% 
+  summarise(pc_sum = sum(pc)) %>% 
+  mutate(responses = case_when(responses == "NO (no release of data)" ~ "NR",
+                               TRUE ~ responses))
+
+years_rel_all %>% 
+  ggplot(aes(pc_sum, 
+             fct_relevel(responses,
+                         rev(c("0", "1", "2", "3", "4",
+                           "5", "6", "7", "8", "10", "10+", "NR"))),
+             fill = questions,
+             group = questions)) +
+  geom_col(position = position_dodge2(preserve = "single", padding = .2),
+           colour = 'black') +
+  scale_fill_manual(values = c("#E69F00", "#56B4E9")) +
+  labs(x = "Fraction of participants (%)",
+       y = "Years until data release",
+       fill = "Funding origin") +
+  scale_x_continuous(expand = c(0,0),
+                     limits = c(0, 25)) +
+  ggtitle("When should sequencing data be made publicly available after data generation?",
+          subtitle = paste0("Overall, ", 
+                            years_rel_all %>% 
+                              filter(questions == "Publicly funded data" &
+                                       responses == "0") %>% 
+                              pull(pc_sum) %>% 
+                              sum,
+                            "% of participants support immediate release of publicly funded data,\nwhile ",
+                            years_rel_all %>% 
+                              filter(questions == "Publicly funded data" &
+                                       responses %in% c("1", "2", "3")) %>% 
+                              pull(pc_sum) %>% 
+                              sum,
+          "% support release within 1-3 years of generation.")) +
+  theme_bw() +
+  theme(legend.position = c(.9, .3),
+        legend.box.background = element_rect(colour = "black"))
+```
+
+### `Concerns about data safety at different levels`
+
+```{r fig.width = 12}
+poss_resp = c("Strongly disagree", "Disagree", "Disagree, Neutral", "Neutral",
+                           "Neutral, Agree", "Agree", "Agree, Strongly agree", "Strongly Agree")
+
+concerns = survey %>% 
+  select(`What is your career stage?`,
+         `In your opinion, concerns about the use of unpublished sequencing data (independent of whether you or another entity created that data) are taken seriously by (select what applies) [Funding agencies]`,
+         `In your opinion, concerns about the use of unpublished sequencing data (independent of whether you or another entity created that data) are taken seriously by (select what applies) [Scientific journals]`,
+         `In your opinion, concerns about the use of unpublished sequencing data (independent of whether you or another entity created that data) are taken seriously by (select what applies) [Academic institutions]`,
+         `In your opinion, concerns about the use of unpublished sequencing data (independent of whether you or another entity created that data) are taken seriously by (select what applies) [Data generators (e.g., taxpayer-funded sequencing facilities).]`) %>% 
+  rename(`Funding agencies` = `In your opinion, concerns about the use of unpublished sequencing data (independent of whether you or another entity created that data) are taken seriously by (select what applies) [Funding agencies]`,
+         `Scientific journals` = `In your opinion, concerns about the use of unpublished sequencing data (independent of whether you or another entity created that data) are taken seriously by (select what applies) [Scientific journals]`,
+         `Academic institutions` = `In your opinion, concerns about the use of unpublished sequencing data (independent of whether you or another entity created that data) are taken seriously by (select what applies) [Academic institutions]`,
+         `Data generators` = `In your opinion, concerns about the use of unpublished sequencing data (independent of whether you or another entity created that data) are taken seriously by (select what applies) [Data generators (e.g., taxpayer-funded sequencing facilities).]`) %>% 
+  ungroup() %>% 
+  group_by(`What is your career stage?`,
+           `Funding agencies`,
+           `Scientific journals`,
+           `Academic institutions`,
+           `Data generators`) %>% 
+  summarise(count = n(),
+            pc = round(count/306*100, 1),
+            count_pc = paste0(pc, "% (", count, ")")) %>% 
+  select(-count) %>% 
+  pivot_longer(names_to = "questions",
+               values_to = "responses",
+               -c(`What is your career stage?`, count_pc, pc)) %>% 
+  ungroup() %>% 
+  group_by(`What is your career stage?`, 
+           questions, responses) %>% 
+  summarise(pc_sum = sum(pc))
+
+ggplot(concerns %>% 
+         filter(responses != "Neutral") %>% 
+         mutate(responses = str_replace(responses, "Disagree, Neutral", "Neutral, Disagree")) %>% 
+         mutate(pc_sum = case_when(responses %in% c("Strongly disagree", "Disagree", "Neutral, Disagree") ~ -pc_sum,
+                                   responses %in% c("Neutral, Agree", "Agree", "Agree, Strongly agree", "Strongly agree") ~ pc_sum,
+                                   responses == "Neutral" ~ 0,
+                                   TRUE ~ pc_sum)),
+       aes(pc_sum,
+           `What is your career stage?`,
+           fill = fct_relevel(responses,
+                         c("Strongly disagree", "Disagree", "Neutral, Disagree", "Neutral",
+                           "Strongly agree", "Agree, Strongly agree", "Agree","Neutral, Agree")))) +
+    geom_bar(stat = 'identity',
+             colour = 'black', 
+             width = .7, size = .3) +
+    facet_grid(questions~.) +
+    guides(fill = guide_legend(title = "Participant opinion")) +
+    scale_fill_manual(values = c("#A50026", "#E75839", "#FCAB62","#F8DF9D",
+                                 "#CDE6E5", "#92C4DE", "#598DC0", "#364B9A"),
+                      breaks =  c("Strongly disagree", "Disagree", "Neutral, Disagree",
+                                  "Neutral, Agree", "Agree", "Agree, Strongly agree", "Strongly agree")) +
+    scale_x_continuous(labels = abs,
+                       breaks = c(-15,-10,-5,0,5,10,15),
+                       limits = c(-15,15)) +
+    labs(x = "% participant responses",
+         y = "Career stage") +
+    ggtitle("Concerns about the use of unpublished sequencing data are taken seriously by:",
+            subtitle = paste0("'Neutral' responses for each category: Academic institutions: ", 
+                              concerns %>% 
+                                filter(questions == "Academic institutions" & responses == "Neutral") %>% 
+                                pull(pc_sum) %>% 
+                                sum, 
+                              "%, Funding agencies: ",
+                              concerns %>% 
+                                filter(questions == "Funding agencies" & responses == "Neutral") %>% 
+                                pull(pc_sum) %>% 
+                                sum,
+                              "%, Scientific journals: ",
+                              concerns %>% 
+                                filter(questions == "Scientific journals" & responses == "Neutral") %>% 
+                                pull(pc_sum) %>% 
+                                sum, "%, Data generators: ",
+                              concerns %>% 
+                                filter(questions == "Data generators" & responses == "Neutral") %>% 
+                                pull(pc_sum) %>% 
+                                sum, "%.")) +
+    theme_bw() +
+    theme(strip.text.y = element_text(angle = 0, face = "bold"),
+          strip.background = element_rect(fill="white"))
+```
+
+### 
+
+```{r}
+scoop = survey %>% 
+  select(`What is your career stage?`,
+         `Please indicate your agreement with the following statement: “I am concerned about other people publishing on my sequence data before I have published on them”:`,
+         `Has your publicly available but unpublished sequencing data been used by others in the past?`) %>% 
+  rename(`“I am concerned about other people publishing on my sequence data before I have published on them”` = `Please indicate your agreement with the following statement: “I am concerned about other people publishing on my sequence data before I have published on them”:`,
+         `"My publicly available but unpublished sequencing data has been used by others in the past"` = `Has your publicly available but unpublished sequencing data been used by others in the past?`) %>% 
+  ungroup() %>% 
+  group_by(`What is your career stage?`,
+         `“I am concerned about other people publishing on my sequence data before I have published on them”`,
+         `"My publicly available but unpublished sequencing data has been used by others in the past"`) %>% 
+  summarise(count = n(),
+            pc = round(count/306*100, 1),
+            count_pc = paste0(pc, "% (", count, ")")) %>% 
+  select(-count) %>% 
+  pivot_longer(names_to = "questions",
+               values_to = "responses",
+               -c(`What is your career stage?`, count_pc, pc)) %>% 
+  ungroup() %>% 
+  group_by(`What is your career stage?`, 
+           questions, responses) %>% 
+  summarise(pc_sum = sum(pc))
+
+scoop1 = scoop %>% 
+  filter(agrepl("My publicly available but unpublished sequencing data has been used by others in the past", 
+                questions)) %>% 
+  ggplot(aes(pc_sum, `What is your career stage?`,
+             fill = responses)) +
+  geom_bar(stat = 'identity',
+           position = 'fill',
+           colour = 'black',
+           size = .3) +
+  labs(x = "% participant responses",
+       y = "Career stage") +
+  scale_fill_manual(values = c("#A50026", "#364B9A"),
+                    guide = guide_legend(reverse = TRUE)) +
+  scale_x_continuous(expand = c(0,0),
+                     breaks = c(.25,.50,.75, 1),
+                     labels = scales::percent_format()) +
+  scale_y_discrete(expand = c(0,0)) +
+  ggtitle("'My publicly available but unpublished sequencing data\nhas been used by others in the past'") +
+  theme_bw() +
+  theme(legend.position = 'bottom',
+        legend.title = element_blank())
+
+scooplala = survey %>% 
+  select(`What is your career stage?`,
+         `Please indicate your agreement with the following statement: “I am concerned about other people publishing on my sequence data before I have published on them”:`,
+         `Has your publicly available but unpublished sequencing data been used by others in the past?`) %>% 
+  rename(`“I am concerned about other people publishing on my sequence data before I have published on them”` = `Please indicate your agreement with the following statement: “I am concerned about other people publishing on my sequence data before I have published on them”:`,
+         `"My publicly available but unpublished sequencing data has been used by others in the past"` = `Has your publicly available but unpublished sequencing data been used by others in the past?`) %>% 
+  ungroup() %>% 
+  group_by(`What is your career stage?`,
+         `“I am concerned about other people publishing on my sequence data before I have published on them”`,
+         `"My publicly available but unpublished sequencing data has been used by others in the past"`) %>% 
+  summarise(count = n(),
+            pc = round(count/306*100, 1),
+            count_pc = paste0(pc, "% (", count, ")")) %>% 
+  select(-count) %>% 
+  pivot_longer(names_to = "questions",
+               values_to = "responses",
+               -c(`What is your career stage?`, count_pc, pc)) %>% 
+  ungroup() %>% 
+  group_by(questions, responses) %>% 
+  summarise(pc_sum = sum(pc))
+
+scoop1.5 = scooplala %>% 
+  filter(agrepl("My publicly available but unpublished sequencing data has been used by others in the past", 
+                questions)) %>% 
+  ggplot(aes(pc_sum, 1,
+             fill = responses)) +
+  geom_bar(stat = 'identity',
+           position = 'fill',
+           colour = 'black',
+           size = .3, width = .2) +
+  labs(x = "% participant responses") +
+  scale_fill_manual(values = c("#A50026", "#364B9A"),
+                    guide = guide_legend(reverse = TRUE)) +
+  scale_x_continuous(expand = c(0,0),
+                     breaks = c(.25,.50,.75, 1),
+                     labels = scales::percent_format()) +
+  scale_y_discrete(expand = c(0,0)) +
+  ggtitle("'My publicly available but unpublished sequencing data\nhas been used by others in the past'") +
+  theme_bw() +
+  theme(legend.position = 'bottom',
+        legend.title = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank())
+
+scoop2 = scoop %>% 
+  filter(agrepl("“I am concerned about other people publishing on my sequence data before I have published on them”", 
+                questions)) %>% 
+  ggplot(aes(pc_sum, `What is your career stage?`,
+             fill = fct_relevel(responses,
+                         c("Strongly disagree", "Disagree", "Neutral",
+                           "Agree", "Strongly agree")))) +
+  geom_bar(stat = 'identity',
+           position = 'fill',
+           colour = 'black',
+           size = .3,) +
+  labs(x = "% participant responses",
+       y = "Career stage") +
+  scale_fill_manual(values = c("#A50026", "#E75839",
+                               "#CDE6E5", "#598DC0", "#364B9A"),
+                    breaks =  c("Strongly disagree", "Disagree", "Neutral",
+                                "Agree", "Strongly agree"),
+                    guide = guide_legend(reverse = TRUE)) +
+  scale_x_continuous(expand = c(0,0),
+                     breaks = c(.25,.50,.75, 1),
+                     labels = scales::percent_format()) +
+  scale_y_discrete(expand = c(0,0)) +
+  ggtitle("'I am concerned about other people publishing on my\nsequence data before I have published on them'") +
+  theme_bw() +
+  theme(legend.position = 'bottom',
+        legend.title = element_blank())
+
+scoop1.5 + scoop2 +
+  plot_layout(ncol = 1, heights = c(0.5, 1))
+```
+
+```{r fig.width=12}
+commication = survey %>% 
+  select(`What is your career stage?`,
+         `Have you ever had a positive communication experience when your publicly available but unpublished sequencing data was used by others in the past? (positive communication is defined here as being contacted before data analysis or publication and asked for collaboration/opinion, or a positive answer when you requested data removal from a manuscript)`,
+         `Have you ever had a negative communication experience when your publicly available but unpublished sequencing data was used by others in the past? (negative communication defined here as no contact prior to publication, or refusal to remove data from a manuscript upon request)`,
+         `Please indicate your agreement with the following statement: “Unauthorized use of my sequence data by other authors has had (or will have) negative impacts on my research program and/or my mentees.”`) %>% 
+  rename(`Positive experience when available but unpublished data was used by others in the past` = `Have you ever had a positive communication experience when your publicly available but unpublished sequencing data was used by others in the past? (positive communication is defined here as being contacted before data analysis or publication and asked for collaboration/opinion, or a positive answer when you requested data removal from a manuscript)`,
+         `Negative experience when available but unpublished data was used by others in the past` = `Have you ever had a negative communication experience when your publicly available but unpublished sequencing data was used by others in the past? (negative communication defined here as no contact prior to publication, or refusal to remove data from a manuscript upon request)`,
+         `“Unauthorized use of my sequence data by other authors has had (or will have) negative impacts on my research program and/or my mentees.”` = `Please indicate your agreement with the following statement: “Unauthorized use of my sequence data by other authors has had (or will have) negative impacts on my research program and/or my mentees.”`) %>% 
+  make_long(`What is your career stage?`,
+         `Positive experience when available but unpublished data was used by others in the past`, 
+         `Negative experience when available but unpublished data was used by others in the past`,
+         `“Unauthorized use of my sequence data by other authors has had (or will have) negative impacts on my research program and/or my mentees.”`)
+
+tol13rainbow=c("#882E72", "#D6C1DE","#4EB265", "#1965B0", "#F1932D", "#364B9A", "#A50026", "#A50026", "#E75839","#CDE6E5", "#598DC0", "#364B9A")
+
+commication = commication %>% 
+  mutate(node = factor(node, levels = c("Professor/Group Leader/PI", "Staff scientist" , "Post doc",
+                                        "Ph.D. student", "Other", "Yes", "No", 
+                                        "Strongly disagree", "Disagree", "Neutral",
+                                        "Agree", "Strongly agree")),
+         next_node = factor(next_node, levels = c("Yes", "No", "Strongly disagree", "Disagree", "Neutral",
+                                                "Agree", "Strongly agree")))
+
+ggplot(commication, aes(x = x, 
+               next_x = next_x, 
+               node = node, 
+               next_node = next_node,
+               fill = factor(node),
+               label = node)) +
+  geom_sankey(flow.alpha = 0.75,
+              node.color = "black") +
+  geom_sankey_label(fill = "white", 
+               alpha = 0.6) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 30)) +
+  scale_fill_manual(values = tol13rainbow) +
+  theme_sankey(base_size = 16) +
+  theme(axis.title = element_blank(),
+        axis.text.x = element_text(face = "bold"),
+        legend.position = "none")
+
+survey %>% 
+  select(`What is your career stage?`,
+         `Have you ever had a positive communication experience when your publicly available but unpublished sequencing data was used by others in the past? (positive communication is defined here as being contacted before data analysis or publication and asked for collaboration/opinion, or a positive answer when you requested data removal from a manuscript)`,
+         `Have you ever had a negative communication experience when your publicly available but unpublished sequencing data was used by others in the past? (negative communication defined here as no contact prior to publication, or refusal to remove data from a manuscript upon request)`,
+         `Please indicate your agreement with the following statement: “Unauthorized use of my sequence data by other authors has had (or will have) negative impacts on my research program and/or my mentees.”`) %>% 
+  rename(`Positive experience when available but unpublished data was used by others in the past` = `Have you ever had a positive communication experience when your publicly available but unpublished sequencing data was used by others in the past? (positive communication is defined here as being contacted before data analysis or publication and asked for collaboration/opinion, or a positive answer when you requested data removal from a manuscript)`,
+         `Negative experience when available but unpublished data was used by others in the past` = `Have you ever had a negative communication experience when your publicly available but unpublished sequencing data was used by others in the past? (negative communication defined here as no contact prior to publication, or refusal to remove data from a manuscript upon request)`,
+         `“Unauthorized use of my sequence data by other authors has had (or will have) negative impacts on my research program and/or my mentees.”` = `Please indicate your agreement with the following statement: “Unauthorized use of my sequence data by other authors has had (or will have) negative impacts on my research program and/or my mentees.”`) %>% 
+  group_by(`Positive experience when available but unpublished data was used by others in the past`,
+           `Negative experience when available but unpublished data was used by others in the past`,
+           `“Unauthorized use of my sequence data by other authors has had (or will have) negative impacts on my research program and/or my mentees.”`) %>% 
+  summarise(Count = n(),
+            `Fraction (%)` = round(Count/306*100, 1)) %>% 
+  arrange(-`Fraction (%)`) %>% 
+  kbl() %>% 
+  kable_classic(full_width = F)
+
+survey %>% 
+  select(`Please indicate your agreement with the following statement: “Unauthorized use of my sequence data by other authors has had (or will have) negative impacts on my research program and/or my mentees.”`) %>% 
+  rename(`“Unauthorized use of my sequence data by other authors has had (or will have) negative impacts on my research program and/or my mentees.”` = `Please indicate your agreement with the following statement: “Unauthorized use of my sequence data by other authors has had (or will have) negative impacts on my research program and/or my mentees.”`) %>% 
+  group_by(`“Unauthorized use of my sequence data by other authors has had (or will have) negative impacts on my research program and/or my mentees.”`) %>% 
+  summarise(Count = n(),
+            `Fraction (%)` = round(Count/306*100, 1)) %>% 
+  mutate(`“Unauthorized use of my sequence data by other authors has had (or will have) negative impacts on my research program and/or my mentees.”` = factor(
+    `“Unauthorized use of my sequence data by other authors has had (or will have) negative impacts on my research program and/or my mentees.”`,
+    levels = rev(c("Strongly disagree", "Disagree", "Neutral", "Agree", "Strongly agree")))) %>% 
+  arrange(`“Unauthorized use of my sequence data by other authors has had (or will have) negative impacts on my research program and/or my mentees.”`) %>% 
+  kbl() %>% 
+  kable_classic(full_width = F) %>% 
+  column_spec(1, width = "12cm") %>% 
+  row_spec(3, extra_css = "border-top: 1px solid;") %>% 
+  row_spec(4, extra_css = "border-top: 1px solid;")
+```
+
+```{r}
+survey %>% 
+  select(`Would you define yourself as a (for definitions, please see the introductory paragraph):`,
+         `You have responded \"Other\" to the previous question: How do you define yourself?`) %>% 
+  filter(!is.na(`You have responded \"Other\" to the previous question: How do you define yourself?`))
+
+#two participants are outliers...
+
+survey %>% 
+  select(`Would you define yourself as a (for definitions, please see the introductory paragraph):`) %>% 
+  rename(`Would you define yourself as a:` = `Would you define yourself as a (for definitions, please see the introductory paragraph):`) %>% 
+  group_by(`Would you define yourself as a:`) %>% 
+  summarise(Count = n(),
+            `Fraction (%)` = round(Count/306*100, 1)) %>% 
+  kbl() %>% 
+  kable_classic(full_width = F) %>% 
+  column_spec(1, bold = TRUE, 
+              border_right = T)
+```
+
+```{r fig.width=12}
+contacts = survey %>% 
+  select(`What is your career stage?`,
+         `Which region are you from?`,
+         `Would you use the DRI tag when submitting your data to a public database to facilitate collaborative reuse of your data?`,
+         `If a dataset included a DRI tag, indicating the data creator prefers to be contacted prior to reuse of their data, would you respect this and contact them?`) %>% 
+  rename(`Would you use the DRI tag?` = `Would you use the DRI tag when submitting your data to a public database to facilitate collaborative reuse of your data?`,
+         `Would you contact data creators via the DRI tag?` = `If a dataset included a DRI tag, indicating the data creator prefers to be contacted prior to reuse of their data, would you respect this and contact them?`) %>% 
+  make_long(`What is your career stage?`,
+           `Which region are you from?`,
+           `Would you use the DRI tag?`,
+           `Would you contact data creators via the DRI tag?`)
+
+contacts_stats = survey %>% 
+  select(`What is your career stage?`,
+         `Which region are you from?`,
+         `Would you use the DRI tag when submitting your data to a public database to facilitate collaborative reuse of your data?`,
+         `If a dataset included a DRI tag, indicating the data creator prefers to be contacted prior to reuse of their data, would you respect this and contact them?`) %>% 
+  rename(`Would you use the DRI tag?` = `Would you use the DRI tag when submitting your data to a public database to facilitate collaborative reuse of your data?`,
+         `Would you contact data creators via the DRI tag?` = `If a dataset included a DRI tag, indicating the data creator prefers to be contacted prior to reuse of their data, would you respect this and contact them?`) %>% 
+  group_by(`Would you use the DRI tag?`,
+           `Would you contact data creators via the DRI tag?`) %>% 
+  summarise(count = n(),
+            pc = round(count/306*100, 1),
+            count_pc = paste0(pc, "% (", count, ")")) 
+
+tol14rainbow=c("#882E72", "#D6C1DE", "#999999", "#1965B0", "#F1932D", "#364B9A", "#A50026", "#A50026", "#E75839","#CDE6E5", "#598DC0", "#364B9A", "#F0E442", "#4EB265")
+
+ggplot(contacts, aes(x = x, 
+               next_x = next_x, 
+               node = node, 
+               next_node = next_node,
+               fill = factor(node),
+               label = node)) +
+  geom_sankey(flow.alpha = 0.75,
+              node.color = "black") +
+  geom_sankey_label(fill = "white", 
+               alpha = 0.6) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 30)) +
+  scale_fill_manual(values = tol14rainbow) +
+  theme_sankey(base_size = 16) +
+  ggtitle("Receptiveness of the DRI tag across academic status and region",
+          subtitle = paste0("Overall, ", 
+                            contacts_stats %>% 
+                              filter(`Would you use the DRI tag?` == "Yes" & 
+                                     `Would you contact data creators via the DRI tag?` == "Yes") %>% 
+                              pull(count_pc),
+                            " of participants would use the DRI tag and contact data creators.")) +
+  theme(axis.title = element_blank(),
+        axis.text.x = element_text(face = "bold"),
+        legend.position = "none")
+
+
+```
