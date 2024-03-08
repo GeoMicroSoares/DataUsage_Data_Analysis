@@ -710,7 +710,7 @@ ggplot(contacts, aes(x = x,
   geom_sankey(flow.alpha = 0.75,
               node.color = "black") +
   geom_sankey_label(fill = "white", 
-               alpha = 0.6) +
+               alpha = 0.5) +
   scale_x_discrete(labels = function(x) str_wrap(x, width = 30)) +
   scale_fill_manual(values = tol14rainbow) +
   theme_sankey(base_size = 16) +
@@ -722,8 +722,7 @@ ggplot(contacts, aes(x = x,
                               pull(count_pc),
                             " of participants would use the DRI tag and contact data creators.")) +
   theme(axis.title = element_blank(),
-        axis.text.x = element_text(face = "bold"),
+        axis.text.x = element_text(face = "bold", colour = 'black'),
         legend.position = "none")
-
-
+ggsave("DRI_Fig2.png", width = 12, height = 5)
 ```
