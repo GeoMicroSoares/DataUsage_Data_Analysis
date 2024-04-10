@@ -42,17 +42,6 @@ sra_bytes = sra %>%
 Linear model fitted as from 2017
 
 ```{r}
-# descdist(sra_bases$values, discrete = FALSE)
-# 
-# fit <- fitDist(sra_bases$values, k = 2, type = "realplus", trace = FALSE, try.gamlss = TRUE)
-# 
-# fit
-# 
-# summary(fit)
-# 
-# boxcox(sra_bases$values ~ sra_bases$days)
-
-#where does an LM intercept the y axis with log10 transformed data?
 ggplot(sra,
        aes(date, log_vals,
            colour = data, fill = data)) +
